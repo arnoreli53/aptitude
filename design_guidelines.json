@@ -1,0 +1,79 @@
+{
+  "theme": "dark",
+  "typography": {
+    "strategy": "Technical & Sterile. Avoid standard SaaS fonts.",
+    "heading_font": "IBM Plex Sans",
+    "body_font": "IBM Plex Sans",
+    "data_font": "JetBrains Mono",
+    "rules": [
+      "Use font-mono for all changing data points (altitude, heading, etc.) to prevent layout shifts.",
+      "System labels (e.g., PANEL A, FUEL SYSTEM) must be uppercase with tracking-[0.2em] and text-xs or text-sm.",
+      "Never use Inter, Roboto, or generic sans for headings."
+    ]
+  },
+  "colors": {
+    "archetype": "THE PERFORMANCE PRO / TACTICAL MINIMALISM",
+    "background_primary": "#000022",
+    "background_secondary": "#000033",
+    "panel_background": "#000044",
+    "border_default": "#1E3A8A",
+    "border_active": "#3B82F6",
+    "accent_success": "#00FF00",
+    "accent_alert": "#FF0000",
+    "accent_highlight": "#4488FF",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#9CA3AF",
+    "rules": [
+      "No full-screen gradients. Texture > gloss.",
+      "Use high-saturation accent blocks for active states and alerts."
+    ]
+  },
+  "visual_enhancers": {
+    "corners": "rounded-none or rounded-sm (max 2px)",
+    "borders": "Prominent 1px solid borders on all panels and cards. Use grid borders (border-collapse style) for density.",
+    "shadows": "None. Rely on borders and background contrast for depth. Tactical Minimalism: Replace soft shadows with 1px solid strokes.",
+    "textures": "Clean solid colors. No gradients. No glassmorphism.",
+    "icons": "Use @phosphor-icons/react for dense, technical UI. (yarn add @phosphor-icons/react)"
+  },
+  "layouts": {
+    "strategy": "Bento Grid Protocol Mode B (High Density Grid) for Analytics/Admin",
+    "dashboard": "12 cards representing modules. Use locked/unlocked visual states (dimmed vs bright). Tight gap-4 or gap-6.",
+    "cognitive_updating": "6 aircraft panels (A-F) arranged in a 2x3 or 3x2 grid. Only 2 panels active/open at once. Active panels have bright borders and visible data, inactive are dimmed out.",
+    "system_logic": "15 system tabs arranged in a dense grid or side navigation. Only 2 open simultaneously. Show linked rules and troubleshooting logic.",
+    "admin_settings": "Dense forms. Use pure HTML + Tailwind for layout, customized Shadcn for inputs/toggles. Align items to start."
+  },
+  "motion": {
+    "strategy": "Minimal to none. Instantaneous feedback. No parallax, no heavy transitions. Only use instant color changes or 100ms fade for hover/active states. Represents professional, zero-latency military software."
+  },
+  "accessibility": {
+    "contrast": "Strict WCAG AAA compliance for text. Ensure neon green and red are readable or paired with icons.",
+    "focus": "High contrast 2px solid ring on focus. MUST explicitly set text color on hover.",
+    "data_testid": "All interactive and key informational elements MUST include a `data-testid` attribute."
+  },
+  "components": {
+    "cards": "Flat, bordered, no shadow. text-left. Use sharp edges, cardless or max 8px border-radius.",
+    "buttons": "Sharp edges, 1px border. Hover state inverts background and text color.",
+    "tabs": "Square, bordered tabs. Active tab gets a top border highlight (accent_highlight) and brighter background."
+  },
+  "instructions_to_main_agent": [
+    "You have .js files not .tsx file, so build components as .js/.jsx.",
+    "Install fonts: IBM Plex Sans and JetBrains Mono.",
+    "Set up Tailwind configuration with the custom color palette (#000022 to #000055 range).",
+    "Build the application as a strict Single Page App with a sidebar or topbar navigation for Dashboard and Admin.",
+    "For the Cognitive Updating module, manage state strictly to allow only 2 panels to be 'open' (displaying data) at any time. When a 3rd is clicked, close the oldest one.",
+    "For the System Logic module, implement the 15 tabs with the same 2-open-max rule.",
+    "Implement a robust settings context/store for Admin Settings (timers, difficulties) using LocalStorage.",
+    "Save all module results locally so performance history is tracked.",
+    "Include Practice mode and Assessment mode with a countdown timer."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "DO NOT apply universal transitions like 'transition: all'.",
+    "DO NOT center align the app container. Left-align dense data.",
+    "Use specific data-testid attributes on all interactive elements. Example: `data-testid='panel-a-toggle'`",
+    "Follow the exact color hex codes provided for the military CBT look. Do not deviate to standard gray/blue themes.",
+    "Use sonner for toast notifications if needed, placed in bottom-right.",
+    "Never use AI assistant Emoji characters.",
+    "DO NOT use complete transparent background in header, overlays, any surface that has content under it.",
+    "Use Phosphor icons. Command: yarn add @phosphor-icons/react"
+  ]
+}

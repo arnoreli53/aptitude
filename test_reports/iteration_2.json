@@ -1,0 +1,31 @@
+{
+  "summary": "Tested completely rewritten Cognitive Updating multitasking module + Admin settings fields + System Logic regression. All UI flows work as specified (menu -> instructions -> test with dual panel groups, panel switching, hydraulic pump behaviour, fuel drain, speed adjust, comms code entry, parcel drop entry, sensor/camera activation, warnings, auto-end results). However, a scoring bug causes time-in-range percentages to exceed 100% on the results screen (e.g., Hydraulic Pressure 134.0%, Airspeed 196.0%).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CognitiveUpdating results", "issue": "Time-in-range percentages exceed 100% (observed 134% pressure, 196% airspeed on a 30s test). Overall Score also inflated (143.3%). Root cause is React 18 StrictMode double-invocation of setState updater callbacks that mutate scoreRef counters, while totalTicks is incremented once per interval tick.", "selector": "results screen (return-menu-btn area)", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix scoring inflation in CognitiveUpdating.js game loop: remove scoreRef.current.pressureInRangeTicks++ / speedInRangeTicks++ from inside setState updater callbacks (lines ~284-309). React 18 StrictMode double-invokes updater callbacks in dev, doubling those counters while totalTicks (raw line 282) increments once. Instead, hold latest pressure/speed in refs (already have pumpOnRef/tanksRef pattern) and do the range check in the interval body, or clamp the final score to <=100%.",
+    "Also consider: line 293-298 fuel check uses tanksRef which is only updated inside the setTanks callback (line 253) - same double-invoke risk, though observed fuelScore was 100.0% so masked by fuel being balanced.",
+    "Minor: cameras' targetSec calculation Math.min(targetSec, testDur-5) collapses all cameras to the same time when testDur is very short (both Alpha & Bravo showed T+00:25 on a 30s test). Only a concern for admin misuse but worth spreading events proportionally to testDur."
+  ],
+  "critical_code_review_comments": [
+    "CognitiveUpdating.js lines 282-309: mutating scoreRef inside setState updater callbacks is unsafe under React 18 StrictMode double-invoke. This is the root cause of >100% scores.",
+    "CognitiveUpdating.js line 337: useState(finalScore) declared AFTER it is referenced by endTest at line 330 - works because endTest is only called from the interval after mount, but it's confusing ordering. Consider moving useState declarations to the top.",
+    "CognitiveUpdating.js: pressureInRange local variable in ControlsPanel (line 828) is computed but not used - dead code.",
+    "CognitiveUpdating.js line 264: 0.001 chance per 100ms tick to change required speed = ~1% per sec - may feel too rare/random; consider parameterizing.",
+    "CognitiveUpdating.js line 375-381: warnings are recomputed on every state change but setWarnings will retrigger the effect chain - potential re-render churn. Consider deriving warnings directly in render instead of storing state."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "92% (11/12 tests pass; scoring math wrong)"},
+  "seed_data_creation": "Temporarily set cu-easy-duration=30 via Admin Settings for fast auto-end verification; restored to 240 after tests.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "CU module works end-to-end: menu (practice/assessment + easy/medium/hard), instructions screen, test with top warning+clock bar, upper tabs Messages/Objectives/Controls, lower tabs Sensors/Engine/Navigation, hydraulic pump on/off drives pressure up/down, fuel drain observed on active tank, speed +/-5 adjustments, comms code keypad -> OK/FAIL, parcel field selectors + digit pad + PREPARE->READY, DROP->DROPPED, sensor ACTIVATE->DONE/MISS, warnings text appears, results screen auto-shown after testDuration expires with all 8 metric rows. ONLY bug is score inflation >100% (see action_items). Admin has all 24 CU fields (8 per difficulty x 3) with correct data-testids and persistence. System Logic module still loads and reaches instructions/start screen (already validated in iteration_1).",
+  "rca of the issue": "In CognitiveUpdating.js startGameLoop() (line 224), scoreRef.current.totalTicks++ runs once per 100ms interval tick. However, scoreRef.current.pressureInRangeTicks++ (line 287) is inside setPressure(p => {...}) and scoreRef.current.speedInRangeTicks++ (line 304) is inside nested setSpeedCurrent/setSpeedRequired updater callbacks. React 18 StrictMode intentionally invokes updater callbacks TWICE in development to help detect impurity. As a result the range-in tick counters roughly double while totalTicks does not, producing observed percentages ~2x expected (134%, 196%). Reproduction: enable dev/StrictMode (default via CRA), start any CU test with pump on the entire time, and the pressure score will exceed 100%. Mitigation: (a) keep refs for latest pressure/speed and increment counters in the interval body after the setPressure/setSpeedCurrent calls, OR (b) remove StrictMode wrapping (worse - loses dev checks), OR (c) clamp: Math.min(100, score) in results calculation."
+}

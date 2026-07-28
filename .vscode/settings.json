@@ -1,0 +1,10 @@
+{
+    "github.copilot.chat.anthropic.useMessagesApi": false,
+    "editor.editContext": false,
+    "chat.tools.terminal.autoApprove": {
+        "/^# Initialize git if needed, create \\.gitignore, commit, and try to create a GitHub repo via gh\nset -e\nif git rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo \"ALREADY_IN_GIT_REPO\"; else git init && echo \"GIT_INIT_DONE\"; fi\nif \\[ ! -f \\.gitignore \\]; then cat > \\.gitignore <<'EOF'\n# Node\nnode_modules/\nbuild/\nfrontend/node_modules/\nfrontend/build/\n# Python\nvenv/\n\\.env\n__pycache__/\n\\*\\.pyc\n\\.DS_Store\nEOF\necho \"\\.gitignore created\"; else echo \"\\.gitignore exists\"; fi\n# Set a safe default git user if not configured to avoid commit failure\nif ! git config user\\.email >/dev/null; then git config user\\.email \"you@example\\.com\"; fi\nif ! git config user\\.name >/dev/null; then git config user\\.name \"Your Name\"; fi\n# Add and commit\ngit add \\. \\|\\| true\nif git diff --staged --quiet; then echo \"NO_CHANGES_TO_COMMIT\"; else git commit -m \"Initial commit\" && echo \"COMMITTED\"; fi\n# Try to create GitHub repo using gh\nif command -v gh >/dev/null 2>&1; then\n  REPO_NAME=\"aptitude\"\n  # If remote origin exists, skip create\n  if git remote get-url origin >/dev/null 2>&1; then echo \"REMOTE_EXISTS:\"\\$\\(git remote get-url origin\\); else\n    gh repo create \"\\$REPO_NAME\" --public --source=\\. --remote=origin --push --confirm && echo \"GH_CREATE_OK\"\n  fi\nelse\n  echo \"GH_CLI_NOT_FOUND\"\nfi\n$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

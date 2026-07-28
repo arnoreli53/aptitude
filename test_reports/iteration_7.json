@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only regression on CFAST battery expanded with 3D Auditory Capacity game, Gamepad Calibration page, Score History (all + per-module) with sparkline, and Dashboard summary tiles + per-module AVG/BEST/ATTEMPTS. All primary flows PASS: (a) Dashboard renders 4 summary tiles (BATTERY AVG, TOTAL ATTEMPTS, MODULES TRIED, GAMEPAD/FULL HISTORY buttons) + 20 module cards with per-card AVG SCORE / BEST / ATTEMPTS or 'No attempts yet.' after seeding history. (b) Category color-header on each card + READY badge. (c) 'View Score History' navigates to /history/<module-id>. (d) Header nav (Dashboard, History, Gamepad, Admin) all navigate correctly with active-state highlighting. (e) /history all-modules shows Module column + summary tiles hist-total=4, hist-assessments=3, hist-avg=73.6%, hist-best=83.3% (from 3 Airborne Numerical seeded assessment attempts + 1 Visual Search practice) with sparkline SVG polyline. (f) /history/airborne-numerical filters correctly (no Module column, only that module stats). (g) Gamepad Calibration renders Live Preview + Controls, Status=NOT CONNECTED red, deadzone/sensitivity sliders, axis X/Y selects, invert checkboxes, Save/Reset/Back buttons; localStorage 'aviation_aptitude_gamepad' updated on Save. (h) Auditory Capacity full 3D scene renders (canvas 960x480, blue ball with radial gradient, yellow numbered checkpoint rings, perspective grid + sunset sky + radar minimap top-right, GATES/DIGITS/INPUT HUD, INPUT toggles KEYBOARD on ArrowRight). (i) All 20 modules reachable at /module/<id> and start Practice+Easy without any JS runtime errors. (j) Cognitive Updating begin-instruction-phase-btn triggers simulation. (k) Numerical Operations Enter key advances question (Q1->Q2). (l) Admin has 20 accordion toggles + Save + admin-gamepad-link.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Dashboard BATTERY AVG when a module has only PRACTICE attempts", "issue": "getStats() returns a non-null stats object with avg=0 for modules that have attempts but no assessments (practice-only). This pulls the battery-avg down (observed 36.8% when one module had 3 assessments @ avg 73.6% and another had only 1 practice @ 30% -> counted as 0). Consider excluding modules with 0 assessments from allStats.avg calculation.", "affected_selectors": ["battery-avg"]}
+    ],
+    "design_issues": [
+      {"screen": "Auditory Capacity 3D game (Easy)", "issues": ["Digit callout interval formula Math.max(1500, (testDuration*500)/sequenceLength) yields 30000ms (30s) between digits on Easy (240s / 4 digits). Callouts occupy only ~half the test time by design, but 30s gaps may feel too sparse for a memory-under-load task. Consider clamping to a max of ~5-8s or using a smaller multiplier."]},
+      {"screen": "GamepadCalibration axis selects", "issues": ["Console shows benign DOM warning '<span> cannot be a child of <option>' caused by dev x-source instrumentation, not app code (not user-visible). No action required unless upgrading the tooling."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "OPTIONAL: In Dashboard.js filter allStats to only modules with assessments>0 before averaging so practice-only modules don't drag BATTERY AVG down.",
+    "OPTIONAL: Tune AuditoryCapacity digit interval so callouts are 4-8s apart on Easy instead of 30s."
+  ],
+  "critical_code_review_comments": [
+    "Dashboard.js: overallAvg averages modules that have 0 assessments (avg=0) if they have any practice attempt. Filter stats.assessments > 0 before averaging.",
+    "AuditoryCapacity.js: digit spawn uses `setInterval` inside `start()` and clears via a returned function that is never invoked (start is not a useEffect). The interval is only cleared naturally when `d >= c.sequenceLength`. On unmount before completion, timer keeps running (though speechSynthesis.cancel is invoked). Consider tracking `digitTimerRef` and clearing in unmount effect.",
+    "AuditoryCapacity.js: `speed` state is set via setSpeed inside RAF loop every frame -> excessive re-renders. Consider using a ref (speedRef) since UI never reads it, or throttle.",
+    "AuditoryCapacity.js: setBallPos, setCheckpoints, setGatesPassed/Missed are called every frame from RAF; this is a heavy render load. Move to refs and only setState at ~10Hz."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% (all critical flows pass; 2 optional design tweaks)"},
+  "seed_data_creation": "localStorage.aviation_aptitude_history seeded with 3 Airborne Numerical assessment attempts (75%, 83.3%, 62.5%) + 1 Visual Search practice (30%) to verify Dashboard tiles, per-card stats, and Score History sparkline / summary tiles.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All existing testids from iteration_6 are stable. New testids: battery-avg, battery-attempts, battery-tried, nav-history-all, nav-gamepad (dashboard), module-card-<id>, module-start-<id>, module-avg-<id>, module-history-<id>, nav-dashboard, nav-history, nav-gamepad-header, nav-admin, hist-total, hist-assessments, hist-avg, hist-best, hist-row-<i>, hist-clear, hist-back, gp-status, gp-raw-x/y, gp-raw-dot, gp-cal-dot, gp-btn-<i>, gp-deadzone, gp-sensitivity, gp-axis-x, gp-axis-y, gp-invert-x, gp-invert-y, gp-save, gp-reset, gp-back, ac-3d-scene, ac-passed, ac-missed, ac-digits-heard, ac-callout, ac-q-text, ac-q-answer, ac-q-input, admin-gamepad-link. AC digit first callout only appears ~30s into Easy test — for automated tests either use short testDuration override or wait ≥30s.",
+  "test_credentials": "N/A (no auth)"
+}

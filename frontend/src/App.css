@@ -1,0 +1,42 @@
+.App {
+  min-height: 100vh;
+  background-color: #000022;
+}
+
+.data-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.025em;
+}
+
+.panel-label {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.border-active {
+  border-color: #3B82F6;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+}
+
+.border-inactive {
+  border-color: #1E3A8A;
+}
+
+.text-success {
+  color: #00FF00;
+}
+
+.text-alert {
+  color: #FF0000;
+}
+
+.bg-panel {
+  background-color: #000044;
+}
+
+.bg-secondary {
+  background-color: #000033;
+}

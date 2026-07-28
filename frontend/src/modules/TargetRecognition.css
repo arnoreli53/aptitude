@@ -1,0 +1,37 @@
+.trt-system-viewport {
+  position: relative;
+  overflow: hidden;
+}
+
+.trt-system-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: grid;
+  will-change: transform;
+  animation-name: trt-system-scroll-down;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.trt-system-row {
+  width: 100%;
+}
+
+.trt-system-code {
+  height: 100%;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+@keyframes trt-system-scroll-down {
+  from {
+    transform: translateY(-50%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
