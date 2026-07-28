@@ -50,6 +50,31 @@ const Account = () => {
       : { type: 'success', text: 'Account preferences saved.' });
   };
 
+  const [subscribing, setSubscribing] = useState(false);
+
+  const handleSubscribe = async () => {
+    if (!user?.email) return;
+    setSubscribing(true);
+    try {
+      const apiBase = process.env.REACT_APP_API_URL || '';
+      const res = await fetch(`${apiBase}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to create checkout session' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Network error' });
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
   const syncCopy = {
     syncing: ['Synchronizing scores', 'Your training history is being updated.'],
     synced: ['Scores synchronized', 'Your training history is saved to this account.'],
@@ -135,6 +160,16 @@ const Account = () => {
               <button type="submit" className="account-primary-button" disabled={saving}>
                 {saving ? <LoaderCircle className="animate-spin" /> : <Save />}
                 <span>{saving ? 'Saving' : 'Save profile'}</span>
+              </button>
+              <button
+                type="button"
+                className="account-secondary-button"
+                onClick={handleSubscribe}
+                disabled={subscribing}
+                title="Subscribe to CBAT Academy"
+              >
+                {subscribing ? <LoaderCircle className="animate-spin" /> : <Cloud />}
+                <span>{subscribing ? 'Redirecting...' : 'Subscribe (3-day trial)'}</span>
               </button>
             </div>
           </form>
