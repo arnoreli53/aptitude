@@ -51,6 +51,7 @@ const Account = () => {
   };
 
   const [subscribing, setSubscribing] = useState(false);
+  const [subscription, setSubscription] = useState(null);
 
   const handleSubscribe = async () => {
     if (!user?.email) return;
@@ -74,6 +75,26 @@ const Account = () => {
       setSubscribing(false);
     }
   };
+
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      if (!user?.email) return;
+      const apiBase = process.env.REACT_APP_API_URL || '';
+      try {
+        const res = await fetch(`${apiBase}/api/subscription/${encodeURIComponent(user.email)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSubscription(data);
+        } else {
+          setSubscription(null);
+        }
+      } catch (err) {
+        setSubscription(null);
+      }
+    };
+
+    fetchSubscription();
+  }, [user?.email]);
 
   const syncCopy = {
     syncing: ['Synchronizing scores', 'Your training history is being updated.'],
@@ -101,6 +122,11 @@ const Account = () => {
             <div>
               <h2 id="profile-heading">Training profile</h2>
               <p>{user?.email}</p>
+              {subscription && (
+                <p style={{marginTop: '6px'}}>
+                  <strong>Subscription:</strong> {subscription.status} {subscription.current_period_end ? `— ends ${new Date(subscription.current_period_end * 1000).toLocaleDateString()}` : ''}
+                </p>
+              )}
             </div>
             <span className="account-verified">
               <CheckCircle2 aria-hidden="true" />

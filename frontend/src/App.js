@@ -17,6 +17,8 @@ import GamepadCalibration from "./pages/GamepadCalibration";
 import ScoreHistory from "./pages/ScoreHistory";
 import ScoreView from "./pages/ScoreView";
 import Account from "./pages/Account";
+import SubscriptionSuccess from "./pages/SubscriptionSuccess";
+import SubscriptionCancel from "./pages/SubscriptionCancel";
 import AuthPage from "./pages/AuthPage";
 import AuthVerify from "./pages/AuthVerify";
 import ResetPassword from "./pages/ResetPassword";
@@ -46,6 +48,8 @@ function AppRoutes() {
         <Route path="/history" element={<PrivatePage><ScoreHistory /></PrivatePage>} />
         <Route path="/history/:moduleId" element={<PrivatePage><ScoreHistory /></PrivatePage>} />
         <Route path="/account" element={<PrivatePage><Account /></PrivatePage>} />
+        <Route path="/subscription/success" element={<SubscriptionSuccess />} />
+        <Route path="/subscription/cancel" element={<SubscriptionCancel />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
