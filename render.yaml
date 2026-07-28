@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: aptitude-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: ./start.sh
