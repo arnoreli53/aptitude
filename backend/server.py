@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List
 import uuid
 from datetime import datetime, timezone
+import stripe
 
 
 ROOT_DIR = Path(__file__).parent
@@ -18,6 +19,12 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+# Stripe configuration
+stripe_api_key = os.environ.get('STRIPE_API_KEY')
+stripe_price_id = os.environ.get('STRIPE_PRICE_ID')  # recurring price ID for the subscription
+if stripe_api_key:
+    stripe.api_key = stripe_api_key
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -41,6 +48,67 @@ class StatusCheckCreate(BaseModel):
 @api_router.get("/")
 async def root():
     return {"message": "Hello World"}
+
+
+# Create a Stripe Checkout session for subscription with a 3-day trial.
+class CheckoutCreate(BaseModel):
+    email: str
+
+
+@api_router.post("/create-checkout-session")
+async def create_checkout_session(input: CheckoutCreate):
+    if not stripe.api_key:
+        return {"error": "Stripe not configured"}
+
+    if not stripe_price_id:
+        return {"error": "Missing STRIPE_PRICE_ID"}
+
+    # Create or find customer by email
+    customers = stripe.Customer.list(email=input.email, limit=1).data
+    if customers:
+        customer = customers[0]
+    else:
+        customer = stripe.Customer.create(email=input.email)
+
+    session = stripe.checkout.Session.create(
+        customer=customer.id,
+        mode='subscription',
+        line_items=[{
+            'price': stripe_price_id,
+            'quantity': 1,
+        }],
+        subscription_data={
+            'trial_period_days': 3
+        },
+        success_url=os.environ.get('SUBSCRIPTION_SUCCESS_URL', 'https://cbat-academy.com/success'),
+        cancel_url=os.environ.get('SUBSCRIPTION_CANCEL_URL', 'https://cbat-academy.com/cancel'),
+    )
+
+    return {'url': session.url}
+
+
+# Webhook endpoint to receive Stripe events (e.g., subscription created)
+@api_router.post('/webhook')
+async def stripe_webhook(request):
+    payload = await request.body()
+    sig_header = request.headers.get('stripe-signature')
+    webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
+
+    if webhook_secret:
+        try:
+            event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+        except Exception as e:
+            return {"error": str(e)}
+    else:
+        # If no webhook secret is set, parse unsafely
+        event = None
+
+    # Handle relevant events
+    if event and event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        # TODO: persist subscription info to DB or update user record
+
+    return {"received": True}
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
