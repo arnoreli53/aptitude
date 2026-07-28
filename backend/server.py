@@ -91,8 +91,8 @@ async def create_checkout_session(input: CheckoutCreate):
         subscription_data={
             'trial_period_days': 3
         },
-        success_url=os.environ.get('SUBSCRIPTION_SUCCESS_URL', 'https://cbat-academy.com/success'),
-        cancel_url=os.environ.get('SUBSCRIPTION_CANCEL_URL', 'https://cbat-academy.com/cancel'),
+        success_url=os.environ.get('SUBSCRIPTION_SUCCESS_URL', 'https://cbat-academy.com/subscription/success'),
+        cancel_url=os.environ.get('SUBSCRIPTION_CANCEL_URL', 'https://cbat-academy.com/subscription/cancel'),
     )
 
     return {'url': session.url}
