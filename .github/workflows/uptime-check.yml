@@ -1,0 +1,22 @@
+name: Uptime check for CBAT-Academy
+
+on:
+  schedule:
+    - cron: '0 8 * * *' # daily at 08:00 UTC
+  workflow_dispatch:
+
+jobs:
+  ping-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check site is responding
+        run: |
+          set -e
+          URL="https://cbat-academy.com"
+          echo "Checking $URL"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$URL" || true)
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ] && [ "$STATUS" != "302" ] && [ "$STATUS" != "301" ]; then
+            echo "Site returned unexpected status: $STATUS"
+            exit 1
+          fi

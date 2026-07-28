@@ -1,0 +1,16 @@
+{
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.cbat-academy.com"
+        }
+      ],
+      "destination": "https://cbat-academy.com/:1",
+      "permanent": true
+    }
+  ]
+}
