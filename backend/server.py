@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Request, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,7 +6,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
 import stripe
@@ -43,6 +43,17 @@ class StatusCheck(BaseModel):
 
 class StatusCheckCreate(BaseModel):
     client_name: str
+
+
+class SubscriptionInfo(BaseModel):
+    subscription_id: str
+    customer_id: str
+    customer_email: Optional[str] = None
+    status: str
+    current_period_end: Optional[datetime] = None
+    trial_end: Optional[datetime] = None
+    price_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
@@ -89,24 +100,60 @@ async def create_checkout_session(input: CheckoutCreate):
 
 # Webhook endpoint to receive Stripe events (e.g., subscription created)
 @api_router.post('/webhook')
-async def stripe_webhook(request):
+async def stripe_webhook(request: Request):
     payload = await request.body()
     sig_header = request.headers.get('stripe-signature')
     webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
 
+    event = None
     if webhook_secret:
         try:
             event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
         except Exception as e:
-            return {"error": str(e)}
+            return HTTPException(status_code=400, detail=f"Webhook signature verification failed: {e}")
     else:
-        # If no webhook secret is set, parse unsafely
-        event = None
+        # Try to parse JSON without verification (not recommended for production)
+        try:
+            event = stripe.Event.construct_from(request.json(), stripe.api_key)
+        except Exception:
+            event = None
 
-    # Handle relevant events
-    if event and event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        # TODO: persist subscription info to DB or update user record
+    if not event:
+        return {"received": True}
+
+    etype = event.get('type')
+    data = event.get('data', {}).get('object', {})
+
+    # Handle checkout.session.completed
+    if etype == 'checkout.session.completed':
+        session = data
+        # session may contain subscription id and customer id
+        subscription_id = session.get('subscription')
+        customer_id = session.get('customer')
+        customer_email = session.get('customer_details', {}).get('email') or session.get('customer_email')
+
+        if customer_id and customer_email:
+            await upsert_customer(customer_email, customer_id)
+
+        if subscription_id:
+            # Retrieve subscription from Stripe to get details
+            try:
+                sub = stripe.Subscription.retrieve(subscription_id, expand=['items'])
+                await save_subscription_record(sub, customer_email)
+            except Exception:
+                pass
+
+    # Handle subscription updates
+    if etype in ('customer.subscription.updated', 'customer.subscription.created'):
+        sub = data
+        # Try to get customer email from customer object if present
+        customer_email = None
+        try:
+            cust = stripe.Customer.retrieve(sub.get('customer'))
+            customer_email = cust.get('email')
+        except Exception:
+            pass
+        await save_subscription_record(sub, customer_email)
 
     return {"received": True}
 
@@ -133,6 +180,66 @@ async def get_status_checks():
             check['timestamp'] = datetime.fromisoformat(check['timestamp'])
     
     return status_checks
+
+
+async def upsert_customer(email: str, customer_id: str):
+    now = datetime.now(timezone.utc)
+    await db.customers.update_one(
+        {"customer_id": customer_id},
+        {"$set": {"email": email, "customer_id": customer_id, "updated_at": now}},
+        upsert=True,
+    )
+
+
+async def save_subscription_record(sub: dict, customer_email: Optional[str] = None):
+    # Normalize subscription dict fields
+    doc = {
+        "subscription_id": sub.get("id"),
+        "customer_id": sub.get("customer"),
+        "customer_email": customer_email,
+        "status": sub.get("status"),
+        "current_period_end": None,
+        "trial_end": None,
+        "price_id": None,
+        "created_at": datetime.now(timezone.utc),
+    }
+
+    # Extract timestamps
+    if sub.get("current_period_end"):
+        try:
+            doc["current_period_end"] = datetime.fromtimestamp(int(sub.get("current_period_end")), timezone.utc)
+        except Exception:
+            pass
+    if sub.get("trial_end"):
+        try:
+            doc["trial_end"] = datetime.fromtimestamp(int(sub.get("trial_end")), timezone.utc)
+        except Exception:
+            pass
+
+    # Try to infer price id
+    items = sub.get("items") or {}
+    try:
+        data = items.get("data") if isinstance(items, dict) else []
+        if data and isinstance(data, list):
+            price = data[0].get("price") or {}
+            doc["price_id"] = price.get("id")
+    except Exception:
+        pass
+
+    await db.subscriptions.update_one({"subscription_id": doc["subscription_id"]}, {"$set": doc}, upsert=True)
+
+
+@api_router.get('/subscription/{email}')
+async def get_subscription(email: str):
+    subs = await db.subscriptions.find({"customer_email": email}).sort([("created_at", -1)]).to_list(1)
+    if not subs:
+        raise HTTPException(status_code=404, detail="No subscription found")
+    # convert datetime fields to ISO
+    sub = subs[0]
+    for k in ("current_period_end", "trial_end", "created_at"):
+        if isinstance(sub.get(k), datetime):
+            sub[k] = sub[k].isoformat()
+    return sub
 
 # Include the router in the main app
 app.include_router(api_router)
